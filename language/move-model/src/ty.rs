@@ -462,6 +462,7 @@ impl Type {
                 Struct(qid.module_id, qid.id, type_args)
             }
             TypeTag::Vector(type_param) => Vector(Box::new(Self::from_type_tag(type_param, env))),
+            TypeTag::Type(i) => TypeParameter(*i),
         }
     }
 

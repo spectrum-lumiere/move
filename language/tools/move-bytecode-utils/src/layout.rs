@@ -358,6 +358,7 @@ impl TypeLayoutBuilder {
             Struct(s) => {
                 MoveTypeLayout::Struct(StructLayoutBuilder::build(s, resolver, layout_type)?)
             }
+            Type(_) => bail!("Type layouts cannot contain type parameter"),
         })
     }
 

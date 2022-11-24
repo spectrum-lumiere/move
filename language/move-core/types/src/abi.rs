@@ -10,6 +10,17 @@ use serde::{Deserialize, Serialize};
 pub enum ScriptABI {
     TransactionScript(TransactionScriptABI),
     ScriptFunction(ScriptFunctionABI),
+    Struct(StructABI),
+}
+
+#[derive(Clone, Debug, Hash, Eq, PartialEq, Serialize, Deserialize)]
+pub struct StructABI {
+    pub name: String,
+    pub module_name: ModuleId,
+    pub doc: String,
+    pub ty_args: Vec<TypeArgumentABI>,
+    pub fields: Vec<ArgumentABI>,
+    pub abilities: Vec<String>,
 }
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq, Serialize, Deserialize)]
@@ -147,6 +158,7 @@ impl ScriptABI {
         match self {
             Self::TransactionScript(abi) => abi.name(),
             Self::ScriptFunction(abi) => abi.name(),
+            Self::Struct(abi) => &abi.name,
         }
     }
 
@@ -154,6 +166,7 @@ impl ScriptABI {
         match self {
             Self::TransactionScript(abi) => abi.doc(),
             Self::ScriptFunction(abi) => abi.doc(),
+            Self::Struct(abi) => &abi.doc,
         }
     }
 
@@ -161,6 +174,7 @@ impl ScriptABI {
         match self {
             Self::TransactionScript(abi) => abi.ty_args(),
             Self::ScriptFunction(abi) => abi.ty_args(),
+            Self::Struct(abi) => &abi.ty_args,
         }
     }
 
@@ -168,6 +182,7 @@ impl ScriptABI {
         match self {
             Self::TransactionScript(abi) => abi.args(),
             Self::ScriptFunction(abi) => abi.args(),
+            Self::Struct(abi) => &abi.fields,
         }
     }
 }

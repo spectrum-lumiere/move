@@ -174,6 +174,7 @@ pub fn convert_move_type_tag(env: &GlobalEnv, tag: &TypeTag) -> PartialVMResult<
         TypeTag::Struct(struct_tag) => {
             BaseType::mk_struct(convert_move_struct_tag(env, struct_tag)?)
         }
+        TypeTag::Type(_) => todo!(),
     };
     Ok(converted)
 }
@@ -299,6 +300,7 @@ fn get_abilities(env: &GlobalEnv, ty: &TypeTag) -> PartialVMResult<AbilitySet> {
         | TypeTag::U256
         | TypeTag::Address => Ok(AbilitySet::PRIMITIVES),
         TypeTag::Signer => Ok(AbilitySet::SIGNER),
+        TypeTag::Type(_) => Ok(AbilitySet::EMPTY),
         TypeTag::Vector(elem_ty) => AbilitySet::polymorphic_abilities(
             AbilitySet::VECTOR,
             vec![false],

@@ -11,12 +11,12 @@ use move_binary_format::file_format::Ability;
 use move_bytecode_verifier::script_signature;
 use move_command_line_common::files::MOVE_COMPILED_EXTENSION;
 use move_core_types::{
-    abi::{ArgumentABI, ScriptABI, ScriptFunctionABI, TransactionScriptABI, TypeArgumentABI},
+    abi::{ArgumentABI, ScriptABI, ScriptFunctionABI, TransactionScriptABI, TypeArgumentABI, StructABI},
     identifier::IdentStr,
     language_storage::{StructTag, TypeTag},
 };
 use move_model::{
-    model::{FunctionEnv, GlobalEnv, ModuleEnv},
+    model::{FunctionEnv, GlobalEnv, ModuleEnv, StructEnv},
     ty,
 };
 use serde::{Deserialize, Serialize};
@@ -70,7 +70,7 @@ impl<'env> Abigen<'env> {
         std::mem::take(&mut self.output)
             .into_iter()
             .map(|(path, abi)| {
-                let content = bcs::to_bytes(&abi).expect("ABI serialization should not fail");
+                let content = serde_json_wasm::to_vec(&abi).expect("ABI serialization should not fail");
                 (path, content)
             })
             .collect()
@@ -166,7 +166,62 @@ impl<'env> Abigen<'env> {
             abis.push(self.generate_abi_for_function(func, module_env)?);
         }
 
+        let struct_iter: Vec<_> = module_env.get_structs().collect();
+        for struct_env in &struct_iter {
+            abis.push(self.generate_abi_for_struct(struct_env, module_env)?);
+        }
+
         Ok(abis)
+    }
+
+    fn generate_abi_for_struct(
+        &self,
+        struct_env: &StructEnv<'env>,
+        module_env: &ModuleEnv<'env>,
+    ) -> anyhow::Result<ScriptABI> {
+        let symbol_pool = module_env.symbol_pool();
+        let name = symbol_pool.string(struct_env.get_name()).to_string();
+        let doc = struct_env.get_doc().to_string();
+        let ty_args = struct_env
+            .get_named_type_parameters()
+            .iter()
+            .map(|ty_param| {
+                TypeArgumentABI::new(symbol_pool.string(ty_param.0).to_string().to_snake_case())
+            })
+            .collect();
+        let fields = struct_env
+            .get_fields()
+            .map(|param| {
+                let tag = Self::get_type_tag(&param.get_type(), module_env)?.unwrap();
+                Ok(ArgumentABI::new(
+                    symbol_pool.string(param.get_name()).to_string(),
+                    tag,
+                ))
+            })
+            .collect::<anyhow::Result<_>>()?;
+        let mut abilities: Vec<String> = vec![];
+        if struct_env.get_abilities().has_key() {
+            abilities.push("key".to_string());
+        }
+        if struct_env.get_abilities().has_store() {
+            abilities.push("store".to_string());
+        }
+        if struct_env.get_abilities().has_copy() {
+            abilities.push("copy".to_string());
+        }
+        if struct_env.get_abilities().has_drop() {
+            abilities.push("drop".to_string());
+        }
+        
+        Ok(ScriptABI::Struct(StructABI {
+            name,
+            module_name: module_env.get_verified_module().self_id(),
+            doc,
+            ty_args,
+            fields,
+            abilities,
+            
+        }))
     }
 
     fn generate_abi_for_function(
@@ -289,8 +344,8 @@ impl<'env> Abigen<'env> {
             Struct(module_id, struct_id, vec_type) => {
                 let expect_msg = format!("type {:?} is not allowed in scription function", ty0);
                 let struct_module_env = module_env.env.get_module(*module_id);
-                let abilities = struct_module_env.get_struct(*struct_id).get_abilities();
-                if abilities.has_ability(Ability::Copy) && !abilities.has_ability(Ability::Key) {
+                // let abilities = struct_module_env.get_struct(*struct_id).get_abilities();
+                // if abilities.has_ability(Ability::Copy) && !abilities.has_ability(Ability::Key) {
                     TypeTag::Struct(Box::new(StructTag {
                         address: *struct_module_env.self_address(),
                         module: struct_module_env.get_identifier(),
@@ -307,12 +362,12 @@ impl<'env> Abigen<'env> {
                             .map(|e| e.unwrap_or_else(|| panic!("{}", expect_msg)))
                             .collect(),
                     }))
-                } else {
-                    return Ok(None);
-                }
+                // } else {
+                //     return Ok(None);
+                // }
             }
+            TypeParameter(i) => TypeTag::Type(*i),
             Tuple(_)
-            | TypeParameter(_)
             | Fun(_, _)
             | TypeDomain(_)
             | ResourceDomain(..)

@@ -967,6 +967,7 @@ impl Loader {
                     Type::StructInstantiation(idx, type_params)
                 }
             }
+            TypeTag::Type(i) => Type::TyParam((*i).into())
         })
     }
 

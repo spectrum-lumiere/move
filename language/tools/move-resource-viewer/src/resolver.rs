@@ -106,6 +106,7 @@ impl<'a, T: MoveResolver + ?Sized> Resolver<'a, T> {
             TypeTag::U256 => FatType::U256,
             TypeTag::U128 => FatType::U128,
             TypeTag::Vector(ty) => FatType::Vector(Box::new(self.resolve_type(ty)?)),
+            TypeTag::Type(i) => FatType::TyParam((*i).into()),
         })
     }
 

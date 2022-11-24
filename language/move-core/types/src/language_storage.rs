@@ -48,6 +48,9 @@ pub enum TypeTag {
     U32,
     #[serde(rename = "u256", alias = "U256")]
     U256,
+
+    #[serde(rename = "T", alias = "Type")]
+    Type(u16),
 }
 
 impl TypeTag {
@@ -75,6 +78,7 @@ impl TypeTag {
             Signer => "signer".to_owned(),
             Vector(t) => format!("vector<{}>", t.to_canonical_string()),
             Struct(s) => s.to_canonical_string(),
+            Type(i) => format!("T{}", i),
         }
     }
 }
@@ -259,6 +263,7 @@ impl Display for TypeTag {
             TypeTag::Address => write!(f, "address"),
             TypeTag::Signer => write!(f, "signer"),
             TypeTag::Bool => write!(f, "bool"),
+            TypeTag::Type(i) => write!(f, "T{}", i),
         }
     }
 }
